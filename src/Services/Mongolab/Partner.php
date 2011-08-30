@@ -103,37 +103,46 @@ class Partner
     }
 
     /**
-     * Get all instances for the account.
+     * Get all partners for the account.
      *
-     * This method is used to retrieve all the instances
-     * for the authenticated account.
-     *
-     * @throws \BadMethoCallException
+     * This method is used to retrieve all the accounts associated
+     * to the master account of the authenticated account.
      *
      * @param  double $method  The HTTP method to invoke. Default GET
      * @return object A json-decoded object of the instances.
      */
     public function getAll($method = HTTP_METH_GET)
     {
-        throw new \BadMethodCallException('This method isn\'t implemented yet.');
+        $url = sprintf('/partners/%s/accounts', $this->accountName);
+        return $this->send($url, $method);
     }
 
     /**
-     * Get a single instance for the account.
+     * Get a single partner for the account.
      *
-     * This method is used to retrieve a single instance
+     * This method is used to retrieve a single partner
      * associated with the authenticated account.
      *
-     * @throws \BadMethodCallException
-     *
-     * @param string $id  The identifier for the instance to retrieve.
+     * @param string $name  The name of the partner to retrieve.
      * @param  double $method  The HTTP method to invoke. Default GET
      *
      * @return object A json-decoded object of the instance.
      */
-    public function get($id, $method = HTTP_METH_GET)
+    public function get($name, $method = HTTP_METH_GET)
     {
-        throw new \BadMethodCallException('This method isn\'t implemented yet.');
+        $url = sprintf('/partners/%s/accounts/%s', $this->accountName, $name);
+        $info = $this->send($url, $method);
+
+        $url = sprintf('/partners/%s/accounts/%s/databases', $this->accountName, $name);
+        $databases = $this->send($url, $method);
+
+        $info->databases = null;
+        if (!empty($databases)) {
+            $info->databases = $databases;
+        }
+
+        return $info;
+
     }
 
     /**
@@ -202,18 +211,40 @@ class Partner
     }
 
     /**
-     * Delete an instance.
+     * Delete a partner.
      *
-     * This method is used to delete a certain instance
-     * using its unique identifier.
+     * This method is used to delete a certain partner
+     * using its unique name.
      *
-     * @param  string $id      The instance identifier to delete.
+     * @param  string $name    The partner identifier to delete.
      * @param  double $method  The HTTP method to invoke. Default DELETE
      * @return object A json-decoded object of the instances.
      */
-    public function delete($id, $method = HTTP_METH_DELETE)
+    public function delete($name, $method = HTTP_METH_DELETE)
     {
-        $url = '/provider/resources/' . $id;
+        $url = sprintf('/partners/%s/accounts/%s', $this->accountName, $name);
+        return $this->send($url, $method);
+    }
+
+    /**
+     * Delete a partner database.
+     *
+     * This method is used to delete a certain partner database
+     * using its unique name.
+     *
+     * @param  string $name    The partner identifier that owns the
+     *                         database to delete.
+     * @param  string $dbName  The name of the database to delete.
+     * @param  double $method  The HTTP method to invoke. Default DELETE
+     * @return object A json-decoded object of the instances.
+     */
+    public function deleteDatabase($name, $dbName, $method = HTTP_METH_DELETE)
+    {
+        $url = sprintf(
+            '/partners/%s/accounts/%s/databases/%s',
+            $this->accountName, $name, $dbName
+        );
+
         return $this->send($url, $method);
     }
 
@@ -239,6 +270,10 @@ class Partner
             'httpauthtype' => HTTP_AUTH_BASIC
         ));
 
+        $http->setHeaders(array(
+            'Content-Type' => 'application/json'
+        ));
+
         if ($method == HTTP_METH_POST && !empty($data)) {
             $http->setBody(json_encode($data));
         }
@@ -246,22 +281,13 @@ class Partner
         $http->send();
 
         if ($http->getResponseCode() == 200) {
-            $body = $http->getResponseBody();
-
-            // On success the MongoLab API returns invalid
-            // JSON and the text only OK
-            if ($body == 'OK') {
-                return json_decode('"OK"');
-            }
-
             return json_decode($http->getResponseBody());
         }
 
-        var_dump($http); die();
         throw new \RuntimeException(
             sprintf(
-                "The request failed with HTTP response code %s",
-                (string)$http->getResponseCode()
+                "The request failed with HTTP response message (%s) and code %s",
+                (string)$http->getResponseBody(), (string)$http->getResponseCode()
             )
         );
     }

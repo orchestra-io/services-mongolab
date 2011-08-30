@@ -1,7 +1,7 @@
 <?php
 
 $conf = array(
-    'account-name' => 'acme',
-    'username'     => 'acme',
-    'password'     => 'YYY',
+    'account-name' => 'orchestra',
+    'username'     => 'orchestra',
+    'password'     => 'webscale',
 );
